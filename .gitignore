@@ -57,7 +57,20 @@ CHECKLIST.md
 FINAL_CHECK.md
 PROJECT_NAME.md
 BRAINSTORMING.md
+BRAINSTORMING_PHP.md
+BRAINSTORMING_LANGUAGES.md
+FEATURE_IDEAS.md
+PROGRESS_DETAILED_DOCS.md
 GITHUB_SETUP.md
 PREPARE_COMMIT.txt
 RELEASE_TEMPLATE.md
+
+# Entwickler-Dokumentation und Test-Scripts
+**/DEPENDENCIES.md
+**/test_*.au3
+**/test_*.js
+**/test_*.py
+**/test_*.go
+**/check_versions.txt
+**/check_*.txt
 
