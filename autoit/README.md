@@ -228,6 +228,8 @@ cd autoit
 AutoIt3.exe /in sync.au3 /out sync.exe
 ```
 
+**Nota:** Los archivos requeridos `Json.au3` y `BinaryCall.au3` ya están incluidos en el directorio `autoit/`.
+
 ---
 
 <div align="center">
