@@ -28,7 +28,24 @@
 
 #### 2. Konfiguration
 
-Kopiere die Beispiel-Konfiguration:
+**Option A: Interaktiver Installer (Empfohlen für Anfänger)**
+```bash
+python3 install.py
+```
+oder
+```bash
+python3 python/installer.py
+```
+
+Der Installer:
+- ✅ Erkennt automatisch dein System
+- ✅ Zeigt System-Spezifikationen an
+- ✅ Erkennt automatisch deine Sprache
+- ✅ Führte dich durch die Konfiguration
+- ✅ Unterstützt alle Protokolle (FTP, SFTP, SMB, SCP)
+- ✅ Erstellt automatisch `config.json`
+
+**Option B: Manuelle Konfiguration**
 ```bash
 cp config.example.json config.json
 ```
@@ -41,6 +58,7 @@ Dann öffne `config.json` und trage deine Daten ein:
     "user": "dein-benutzername",
     "password": "dein-passwort",
     "type": "ftp",
+    "comment": "Protokoll-Optionen: 'ftp' (Standard), 'sftp', 'smb', 'scp'",
     "remotePath": "/keepass_passwords.kdbx"
   },
   "keepass": {
@@ -124,6 +142,17 @@ Das Script synchronisiert deine KeePass-Datenbank in 4 Schritten:
 
 Das Script unterstützt **Deutsch**, **Englisch** und **Spanisch**. Die Sprache wird automatisch erkannt oder kann in `config.json` eingestellt werden:
 
+### 📡 Unterstützte Protokolle
+
+Das Script unterstützt mehrere Übertragungsprotokolle:
+
+- **FTP** (Standard) - File Transfer Protocol
+- **SFTP** - SSH File Transfer Protocol (verschlüsselt)
+- **SMB/CIFS** - Windows-Netzwerk-Freigaben
+- **SCP** - Secure Copy Protocol (SSH-basiert)
+
+Wähle das Protokoll in `config.json` mit `"type": "ftp"` (oder `sftp`, `smb`, `scp`).
+
 ```json
 {
   "settings": {
@@ -183,7 +212,24 @@ A: Ja! So viele wie du möchtest. Der FTP-Server ist die zentrale Quelle.
 
 #### 2. Configuration
 
-Copy the example configuration:
+**Option A: Interactive Installer (Recommended for beginners)**
+```bash
+python3 install.py
+```
+or
+```bash
+python3 python/installer.py
+```
+
+The installer:
+- ✅ Automatically detects your system
+- ✅ Shows system specifications
+- ✅ Automatically detects your language
+- ✅ Guides you through configuration
+- ✅ Supports all protocols (FTP, SFTP, SMB, SCP)
+- ✅ Automatically creates `config.json`
+
+**Option B: Manual Configuration**
 ```bash
 cp config.example.json config.json
 ```
@@ -196,6 +242,7 @@ Then open `config.json` and enter your data:
     "user": "your-username",
     "password": "your-password",
     "type": "ftp",
+    "comment": "Protocol options: 'ftp' (default), 'sftp', 'smb', 'scp'",
     "remotePath": "/keepass_passwords.kdbx"
   },
   "keepass": {
@@ -279,6 +326,17 @@ The script synchronizes your KeePass database in 4 steps:
 
 The script supports **German**, **English**, and **Spanish**. Language is automatically detected or can be set in `config.json`:
 
+### 📡 Supported Protocols
+
+The script supports multiple transfer protocols:
+
+- **FTP** (Default) - File Transfer Protocol
+- **SFTP** - SSH File Transfer Protocol (encrypted)
+- **SMB/CIFS** - Windows Network Shares
+- **SCP** - Secure Copy Protocol (SSH-based)
+
+Choose the protocol in `config.json` with `"type": "ftp"` (or `sftp`, `smb`, `scp`).
+
 ```json
 {
   "settings": {
@@ -338,7 +396,24 @@ A: Yes! As many as you want. The FTP server is the central source.
 
 #### 2. Configuración
 
-Copia la configuración de ejemplo:
+**Opción A: Instalador Interactivo (Recomendado para principiantes)**
+```bash
+python3 install.py
+```
+o
+```bash
+python3 python/installer.py
+```
+
+El instalador:
+- ✅ Detecta automáticamente tu sistema
+- ✅ Muestra especificaciones del sistema
+- ✅ Detecta automáticamente tu idioma
+- ✅ Te guía a través de la configuración
+- ✅ Soporta todos los protocolos (FTP, SFTP, SMB, SCP)
+- ✅ Crea automáticamente `config.json`
+
+**Opción B: Configuración Manual**
 ```bash
 cp config.example.json config.json
 ```
@@ -351,6 +426,7 @@ Luego abre `config.json` e ingresa tus datos:
     "user": "tu-usuario",
     "password": "tu-contraseña",
     "type": "ftp",
+    "comment": "Opciones de protocolo: 'ftp' (por defecto), 'sftp', 'smb', 'scp'",
     "remotePath": "/keepass_passwords.kdbx"
   },
   "keepass": {
@@ -433,6 +509,17 @@ El script sincroniza tu base de datos KeePass en 4 pasos:
 ### 🌍 Soporte Multiidioma
 
 El script soporta **Alemán**, **Inglés** y **Español**. El idioma se detecta automáticamente o se puede configurar en `config.json`:
+
+### 📡 Protocolos Soportados
+
+El script soporta múltiples protocolos de transferencia:
+
+- **FTP** (Por defecto) - Protocolo de transferencia de archivos
+- **SFTP** - Protocolo de transferencia de archivos SSH (encriptado)
+- **SMB/CIFS** - Recursos compartidos de red Windows
+- **SCP** - Protocolo de copia segura (basado en SSH)
+
+Elige el protocolo en `config.json` con `"type": "ftp"` (o `sftp`, `smb`, `scp`).
 
 ```json
 {

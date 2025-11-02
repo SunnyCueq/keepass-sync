@@ -127,13 +127,15 @@ def parse_config():
         
         # Pfade expandieren
         home = os.path.expanduser('~')
+        
+        # Protokoll-Informationen aus Config extrahieren
+        ftp_config = config['ftp']
+        protocol = ftp_config.get('type', 'ftp').lower()
+        
+        # Basis-Einstellungen
         settings = {
             'keepassxc': config['keepass'].get('keepassXCPath', 'keepassxc-cli').replace('~', home),
-            'ftp_host': config['ftp']['host'],
-            'ftp_user': config['ftp']['user'],
-            'ftp_pass': config['ftp'].get('password', ''),
-            'ftp_type': config['ftp'].get('type', 'ftp'),
-            'ftp_db': config['ftp']['remotePath'],
+            'protocol': protocol,
             'local_db': config['local']['localPath'].replace('~', home),
             'temp_db': config['local']['tempPath'].replace('~', home),
             'backup_dir': config['local']['backupDir'],
@@ -144,6 +146,33 @@ def parse_config():
             'cleanup_logs': config['settings'].get('cleanupLogs', True),
             'max_log_age': config['settings'].get('maxLogAgeDays', 7),
         }
+        
+        # Protokoll-spezifische Einstellungen
+        if protocol in ['ftp', 'sftp']:
+            settings.update({
+                'host': ftp_config['host'],
+                'user': ftp_config['user'],
+                'password': ftp_config.get('password', ''),
+                'remote_path': ftp_config['remotePath'],
+                'port': ftp_config.get('port', 21 if protocol == 'ftp' else 22),
+            })
+        elif protocol == 'smb':
+            settings.update({
+                'host': ftp_config['host'],
+                'share': ftp_config['share'],
+                'user': ftp_config['user'],
+                'password': ftp_config.get('password', ''),
+                'domain': ftp_config.get('domain', 'WORKGROUP'),
+                'remote_path': ftp_config['remotePath'],
+            })
+        elif protocol == 'scp':
+            settings.update({
+                'host': ftp_config['host'],
+                'user': ftp_config['user'],
+                'password': ftp_config.get('password', ''),
+                'remote_path': ftp_config['remotePath'],
+                'port': ftp_config.get('port', 22),
+            })
         
         return settings
     except Exception as e:
@@ -165,6 +194,18 @@ def create_backup(local_db, backup_dir):
         return True
     except Exception as e:
         write_log(f"{messages.get('MSG_BACKUP_FAIL', 'Backup fehlgeschlagen')}: {e}")
+        return False
+
+def download_file(host, user, password, remote_path, temp_file, protocol='ftp', **kwargs):
+    """Lade Datei herunter - unterstützt FTP, SFTP, SMB, SCP"""
+    if protocol.lower() in ['ftp', 'sftp']:
+        return download_ftp(host, user, password, remote_path, temp_file, protocol)
+    elif protocol.lower() == 'smb':
+        return download_smb(host, kwargs.get('share', ''), user, password, remote_path, temp_file, kwargs.get('domain', 'WORKGROUP'))
+    elif protocol.lower() == 'scp':
+        return download_scp(host, user, password, remote_path, temp_file, kwargs.get('port', 22))
+    else:
+        write_log(f"Unbekanntes Protokoll: {protocol}")
         return False
 
 def download_ftp(host, user, password, remote_path, temp_file, ftp_type='ftp'):
@@ -260,6 +301,18 @@ def merge_databases(keepassxc, local_db, temp_db, password):
         write_log(f"{messages.get('MSG_MERGE_FAIL', 'Merge fehlgeschlagen')}: {e}")
         return False
 
+def upload_file(host, user, password, remote_path, local_file, protocol='ftp', **kwargs):
+    """Lade Datei hoch - unterstützt FTP, SFTP, SMB, SCP"""
+    if protocol.lower() in ['ftp', 'sftp']:
+        return upload_ftp(host, user, password, remote_path, local_file, protocol)
+    elif protocol.lower() == 'smb':
+        return upload_smb(host, kwargs.get('share', ''), user, password, remote_path, local_file, kwargs.get('domain', 'WORKGROUP'))
+    elif protocol.lower() == 'scp':
+        return upload_scp(host, user, password, remote_path, local_file, kwargs.get('port', 22))
+    else:
+        write_log(f"Unbekanntes Protokoll: {protocol}")
+        return False
+
 def upload_ftp(host, user, password, remote_path, local_file, ftp_type='ftp'):
     """Lade Datei zum FTP-Server hoch"""
     write_log(messages.get("MSG_UPLOAD_START", "Starte Upload..."))
@@ -307,6 +360,247 @@ def upload_ftp(host, user, password, remote_path, local_file, ftp_type='ftp'):
         
         write_log(messages.get("MSG_UPLOAD_SUCCESS", "Upload erfolgreich"))
         return True
+    except Exception as e:
+        write_log(f"{messages.get('MSG_UPLOAD_FAIL', 'Upload fehlgeschlagen')}: {e}")
+        return False
+
+def download_smb(host, share, user, password, remote_path, temp_file, domain='WORKGROUP'):
+    """Lade Datei von SMB/CIFS-Freigabe herunter"""
+    write_log(messages.get("MSG_DOWNLOAD_START", "Starte Download..."))
+    
+    try:
+        # Verwende smbclient (Linux/macOS) oder native Windows-Tools
+        if platform.system() == 'Windows':
+            # Windows: Verwende net use oder robocopy
+            # Für einfache Implementierung: Python Library pysmb
+            write_log("SMB auf Windows: Verwende native Methode")
+            # Fallback: Versuche mit pysmb falls installiert
+            try:
+                from smb.SMBConnection import SMBConnection
+                conn = SMBConnection(user, password, 'keepass-sync', host, domain=domain, use_ntlm_v2=True)
+                conn.connect(host, 139)
+                
+                with open(temp_file, 'wb') as local_file:
+                    conn.retrieveFile(share, remote_path, local_file)
+                
+                conn.close()
+                
+                if os.path.exists(temp_file):
+                    write_log(messages.get("MSG_DOWNLOAD_SUCCESS", "Download erfolgreich"))
+                    return True
+            except ImportError:
+                write_log("Fehler: pysmb nicht installiert. Installiere mit: pip install pysmb")
+                return False
+        else:
+            # Linux/macOS: Verwende smbclient
+            smb_url = f"//{host}/{share}"
+            cmd = [
+                'smbclient',
+                smb_url,
+                '-U', f"{domain}\\{user}%{password}",
+                '-c', f'get "{remote_path}" "{temp_file}"'
+            ]
+            
+            process = subprocess.run(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True
+            )
+            
+            if os.path.exists(temp_file):
+                write_log(messages.get("MSG_DOWNLOAD_SUCCESS", "Download erfolgreich"))
+                return True
+            else:
+                write_log(f"{messages.get('MSG_DOWNLOAD_FAIL', 'Download fehlgeschlagen')}: {process.stderr}")
+                return False
+    except FileNotFoundError:
+        write_log("SMB-Client nicht gefunden. Installiere smbclient: sudo apt install smbclient")
+        return False
+    except Exception as e:
+        write_log(f"{messages.get('MSG_DOWNLOAD_FAIL', 'Download fehlgeschlagen')}: {e}")
+        return False
+
+def upload_smb(host, share, user, password, remote_path, local_file, domain='WORKGROUP'):
+    """Lade Datei zu SMB/CIFS-Freigabe hoch"""
+    write_log(messages.get("MSG_UPLOAD_START", "Starte Upload..."))
+    
+    try:
+        if platform.system() == 'Windows':
+            # Windows: Verwende pysmb
+            try:
+                from smb.SMBConnection import SMBConnection
+                conn = SMBConnection(user, password, 'keepass-sync', host, domain=domain, use_ntlm_v2=True)
+                conn.connect(host, 139)
+                
+                with open(local_file, 'rb') as local_file_obj:
+                    conn.storeFile(share, remote_path, local_file_obj)
+                
+                conn.close()
+                write_log(messages.get("MSG_UPLOAD_SUCCESS", "Upload erfolgreich"))
+                return True
+            except ImportError:
+                write_log("Fehler: pysmb nicht installiert. Installiere mit: pip install pysmb")
+                return False
+        else:
+            # Linux/macOS: Verwende smbclient
+            smb_url = f"//{host}/{share}"
+            cmd = [
+                'smbclient',
+                smb_url,
+                '-U', f"{domain}\\{user}%{password}",
+                '-c', f'put "{local_file}" "{remote_path}"'
+            ]
+            
+            process = subprocess.run(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True
+            )
+            
+            if process.returncode == 0:
+                write_log(messages.get("MSG_UPLOAD_SUCCESS", "Upload erfolgreich"))
+                return True
+            else:
+                write_log(f"{messages.get('MSG_UPLOAD_FAIL', 'Upload fehlgeschlagen')}: {process.stderr}")
+                return False
+    except FileNotFoundError:
+        write_log("SMB-Client nicht gefunden. Installiere smbclient: sudo apt install smbclient")
+        return False
+    except Exception as e:
+        write_log(f"{messages.get('MSG_UPLOAD_FAIL', 'Upload fehlgeschlagen')}: {e}")
+        return False
+
+def download_scp(host, user, password, remote_path, temp_file, port=22):
+    """Lade Datei via SCP herunter"""
+    write_log(messages.get("MSG_DOWNLOAD_START", "Starte Download..."))
+    
+    try:
+        # Verwende sshpass für Passwort-Übergabe, oder paramiko
+        # Option 1: scp mit sshpass (Linux/macOS)
+        if platform.system() != 'Windows':
+            cmd = [
+                'sshpass', '-p', password,
+                'scp', '-P', str(port),
+                '-o', 'StrictHostKeyChecking=no',
+                '-o', 'UserKnownHostsFile=/dev/null',
+                f"{user}@{host}:{remote_path}",
+                temp_file
+            ]
+            
+            process = subprocess.run(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True
+            )
+            
+            if os.path.exists(temp_file):
+                write_log(messages.get("MSG_DOWNLOAD_SUCCESS", "Download erfolgreich"))
+                return True
+            else:
+                write_log(f"{messages.get('MSG_DOWNLOAD_FAIL', 'Download fehlgeschlagen')}: {process.stderr}")
+                return False
+        else:
+            # Windows: Verwende paramiko
+            try:
+                import paramiko
+                ssh = paramiko.SSHClient()
+                ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+                ssh.connect(host, port=port, username=user, password=password)
+                
+                sftp = ssh.open_sftp()
+                sftp.get(remote_path, temp_file)
+                sftp.close()
+                ssh.close()
+                
+                if os.path.exists(temp_file):
+                    write_log(messages.get("MSG_DOWNLOAD_SUCCESS", "Download erfolgreich"))
+                    return True
+            except ImportError:
+                write_log("Fehler: paramiko nicht installiert. Installiere mit: pip install paramiko")
+                return False
+    except FileNotFoundError:
+        write_log("SCP-Tool nicht gefunden. Installiere sshpass: sudo apt install sshpass")
+        return False
+    except Exception as e:
+        write_log(f"{messages.get('MSG_DOWNLOAD_FAIL', 'Download fehlgeschlagen')}: {e}")
+        return False
+
+def upload_scp(host, user, password, remote_path, local_file, port=22):
+    """Lade Datei via SCP hoch"""
+    write_log(messages.get("MSG_UPLOAD_START", "Starte Upload..."))
+    
+    try:
+        if platform.system() != 'Windows':
+            # Linux/macOS: scp mit sshpass
+            remote_dir = os.path.dirname(remote_path) or '.'
+            remote_file = os.path.basename(remote_path)
+            
+            # Erstelle Verzeichnis falls nötig
+            mkdir_cmd = [
+                'sshpass', '-p', password,
+                'ssh', '-p', str(port),
+                '-o', 'StrictHostKeyChecking=no',
+                '-o', 'UserKnownHostsFile=/dev/null',
+                f"{user}@{host}",
+                f"mkdir -p {remote_dir}"
+            ]
+            subprocess.run(mkdir_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            
+            cmd = [
+                'sshpass', '-p', password,
+                'scp', '-P', str(port),
+                '-o', 'StrictHostKeyChecking=no',
+                '-o', 'UserKnownHostsFile=/dev/null',
+                local_file,
+                f"{user}@{host}:{remote_path}"
+            ]
+            
+            process = subprocess.run(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True
+            )
+            
+            if process.returncode == 0:
+                write_log(messages.get("MSG_UPLOAD_SUCCESS", "Upload erfolgreich"))
+                return True
+            else:
+                write_log(f"{messages.get('MSG_UPLOAD_FAIL', 'Upload fehlgeschlagen')}: {process.stderr}")
+                return False
+        else:
+            # Windows: paramiko
+            try:
+                import paramiko
+                ssh = paramiko.SSHClient()
+                ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+                ssh.connect(host, port=port, username=user, password=password)
+                
+                sftp = ssh.open_sftp()
+                
+                # Erstelle Verzeichnis falls nötig
+                remote_dir = os.path.dirname(remote_path)
+                if remote_dir:
+                    try:
+                        sftp.mkdir(remote_dir)
+                    except:
+                        pass  # Verzeichnis existiert bereits
+                
+                sftp.put(local_file, remote_path)
+                sftp.close()
+                ssh.close()
+                
+                write_log(messages.get("MSG_UPLOAD_SUCCESS", "Upload erfolgreich"))
+                return True
+            except ImportError:
+                write_log("Fehler: paramiko nicht installiert. Installiere mit: pip install paramiko")
+                return False
+    except FileNotFoundError:
+        write_log("SCP-Tool nicht gefunden. Installiere sshpass: sudo apt install sshpass")
+        return False
     except Exception as e:
         write_log(f"{messages.get('MSG_UPLOAD_FAIL', 'Upload fehlgeschlagen')}: {e}")
         return False
@@ -365,9 +659,9 @@ def main():
     # Debug-Ausgabe
     if config['debug']:
         write_log(f"Debug: KEEPASSXC={config['keepassxc']}")
-        write_log(f"Debug: FTP_HOST={config['ftp_host']}")
-        write_log(f"Debug: FTP_USER={config['ftp_user']}")
-        write_log(f"Debug: FTP_TYPE={config['ftp_type']}")
+        write_log(f"Debug: PROTOCOL={config['protocol']}")
+        write_log(f"Debug: HOST={config.get('host', 'N/A')}")
+        write_log(f"Debug: USER={config.get('user', 'N/A')}")
     
     # KeePassXC finden
     keepassxc = find_executable(config['keepassxc'])
@@ -384,15 +678,43 @@ def main():
     # Alte Backups aufräumen
     cleanup_old_backups(config['backup_dir'], config['max_backups'])
     
-    # Download
-    if not download_ftp(
-        config['ftp_host'],
-        config['ftp_user'],
-        config['ftp_pass'],
-        config['ftp_db'],
-        config['temp_db'],
-        config['ftp_type']
-    ):
+    # Download (abhängig vom Protokoll)
+    protocol = config['protocol']
+    if protocol in ['ftp', 'sftp']:
+        success = download_file(
+            config['host'],
+            config['user'],
+            config['password'],
+            config['remote_path'],
+            config['temp_db'],
+            protocol=protocol
+        )
+    elif protocol == 'smb':
+        success = download_file(
+            config['host'],
+            config['user'],
+            config['password'],
+            config['remote_path'],
+            config['temp_db'],
+            protocol=protocol,
+            share=config['share'],
+            domain=config['domain']
+        )
+    elif protocol == 'scp':
+        success = download_file(
+            config['host'],
+            config['user'],
+            config['password'],
+            config['remote_path'],
+            config['temp_db'],
+            protocol=protocol,
+            port=config['port']
+        )
+    else:
+        write_log(f"Unbekanntes Protokoll: {protocol}")
+        sys.exit(1)
+    
+    if not success:
         sys.exit(1)
     
     # Merge
@@ -404,15 +726,42 @@ def main():
     ):
         sys.exit(1)
     
-    # Upload
-    if not upload_ftp(
-        config['ftp_host'],
-        config['ftp_user'],
-        config['ftp_pass'],
-        config['ftp_db'],
-        config['local_db'],
-        config['ftp_type']
-    ):
+    # Upload (abhängig vom Protokoll)
+    if protocol in ['ftp', 'sftp']:
+        success = upload_file(
+            config['host'],
+            config['user'],
+            config['password'],
+            config['remote_path'],
+            config['local_db'],
+            protocol=protocol
+        )
+    elif protocol == 'smb':
+        success = upload_file(
+            config['host'],
+            config['user'],
+            config['password'],
+            config['remote_path'],
+            config['local_db'],
+            protocol=protocol,
+            share=config['share'],
+            domain=config['domain']
+        )
+    elif protocol == 'scp':
+        success = upload_file(
+            config['host'],
+            config['user'],
+            config['password'],
+            config['remote_path'],
+            config['local_db'],
+            protocol=protocol,
+            port=config['port']
+        )
+    else:
+        write_log(f"Unbekanntes Protokoll: {protocol}")
+        sys.exit(1)
+    
+    if not success:
         sys.exit(1)
     
     # Aufräumen

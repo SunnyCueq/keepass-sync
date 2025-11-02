@@ -16,14 +16,45 @@
 
 Diese detaillierte Anleitung erklärt, wie du das KeePass Sync Script auf deinem System installierst und automatisch ausführen lässt.
 
+## 🚀 Schnellstart mit Installer (Empfohlen)
+
+Für unerfahrene Benutzer gibt es einen interaktiven Installer:
+
+```bash
+python3 install.py
+```
+
+Der Installer:
+- ✅ Erkennt automatisch dein System
+- ✅ Zeigt System-Spezifikationen
+- ✅ Erkennt deine Sprache
+- ✅ Führt dich durch die Konfiguration
+- ✅ Unterstützt alle Protokolle (FTP, SFTP, SMB, SCP)
+- ✅ Erstellt automatisch `config.json`
+
 ## Voraussetzungen
 
 ### Alle Systeme
 - KeePassXC installiert (mit `keepassxc-cli`)
-- FTP-Zugangsdaten in `config.json` konfiguriert
+- Python 3.6+ installiert
+
+### Protokoll-spezifische Anforderungen:
+
+**FTP:**
+- `lftp` installieren: `sudo pacman -S lftp` (Arch/CachyOS) oder `sudo apt install lftp` (Debian/Ubuntu)
+
+**SFTP:**
+- `lftp` installieren (wie oben)
+
+**SMB/CIFS:**
+- Linux/macOS: `smbclient` installieren: `sudo pacman -S samba` oder `sudo apt install samba-common`
+- Windows: Native Unterstützung (optional: `pysmb` Python-Library)
+
+**SCP:**
+- Linux/macOS: `sshpass` installieren: `sudo pacman -S sshpass` oder `sudo apt install sshpass`
+- Windows: `paramiko` Python-Library: `pip install paramiko`
 
 ### Linux
-- `lftp` installieren: `sudo pacman -S lftp` (Arch/CachyOS) oder `sudo apt install lftp` (Debian/Ubuntu)
 - Optional: Python 3.6+ für Cross-Platform-Version
 
 ### Windows
@@ -32,7 +63,6 @@ Diese detaillierte Anleitung erklärt, wie du das KeePass Sync Script auf deinem
 
 ### macOS
 - Homebrew (optional, aber empfohlen)
-- `lftp` installieren: `brew install lftp`
 
 ---
 
@@ -249,14 +279,45 @@ Verwende `ioreg` für Leerlauf-Erkennung (komplexer, LaunchAgent mit StartInterv
 
 This detailed guide explains how to install and automatically run the KeePass Sync script on your system.
 
+## 🚀 Quick Start with Installer (Recommended)
+
+For inexperienced users, there's an interactive installer:
+
+```bash
+python3 install.py
+```
+
+The installer:
+- ✅ Automatically detects your system
+- ✅ Shows system specifications
+- ✅ Detects your language
+- ✅ Guides you through configuration
+- ✅ Supports all protocols (FTP, SFTP, SMB, SCP)
+- ✅ Automatically creates `config.json`
+
 ## Prerequisites
 
 ### All Systems
 - KeePassXC installed (with `keepassxc-cli`)
-- FTP credentials configured in `config.json`
+- Python 3.6+ installed
+
+### Protocol-specific Requirements:
+
+**FTP:**
+- Install `lftp`: `sudo pacman -S lftp` (Arch/CachyOS) or `sudo apt install lftp` (Debian/Ubuntu)
+
+**SFTP:**
+- Install `lftp` (as above)
+
+**SMB/CIFS:**
+- Linux/macOS: Install `smbclient`: `sudo pacman -S samba` or `sudo apt install samba-common`
+- Windows: Native support (optional: `pysmb` Python library)
+
+**SCP:**
+- Linux/macOS: Install `sshpass`: `sudo pacman -S sshpass` or `sudo apt install sshpass`
+- Windows: `paramiko` Python library: `pip install paramiko`
 
 ### Linux
-- Install `lftp`: `sudo pacman -S lftp` (Arch/CachyOS) or `sudo apt install lftp` (Debian/Ubuntu)
 - Optional: Python 3.6+ for cross-platform version
 
 ### Windows
@@ -265,7 +326,6 @@ This detailed guide explains how to install and automatically run the KeePass Sy
 
 ### macOS
 - Homebrew (optional but recommended)
-- Install `lftp`: `brew install lftp`
 
 ---
 
@@ -482,14 +542,45 @@ Use `ioreg` for idle detection (more complex, LaunchAgent with StartInterval is 
 
 Esta guía detallada explica cómo instalar y ejecutar automáticamente el script de sincronización de KeePass en tu sistema.
 
+## 🚀 Inicio Rápido con Instalador (Recomendado)
+
+Para usuarios sin experiencia, hay un instalador interactivo:
+
+```bash
+python3 install.py
+```
+
+El instalador:
+- ✅ Detecta automáticamente tu sistema
+- ✅ Muestra especificaciones del sistema
+- ✅ Detecta tu idioma
+- ✅ Te guía a través de la configuración
+- ✅ Soporta todos los protocolos (FTP, SFTP, SMB, SCP)
+- ✅ Crea automáticamente `config.json`
+
 ## Requisitos Previos
 
 ### Todos los Sistemas
 - KeePassXC instalado (con `keepassxc-cli`)
-- Credenciales FTP configuradas en `config.json`
+- Python 3.6+ instalado
+
+### Requisitos Específicos por Protocolo:
+
+**FTP:**
+- Instalar `lftp`: `sudo pacman -S lftp` (Arch/CachyOS) o `sudo apt install lftp` (Debian/Ubuntu)
+
+**SFTP:**
+- Instalar `lftp` (como arriba)
+
+**SMB/CIFS:**
+- Linux/macOS: Instalar `smbclient`: `sudo pacman -S samba` o `sudo apt install samba-common`
+- Windows: Soporte nativo (opcional: biblioteca Python `pysmb`)
+
+**SCP:**
+- Linux/macOS: Instalar `sshpass`: `sudo pacman -S sshpass` o `sudo apt install sshpass`
+- Windows: Bibliotec Python `paramiko`: `pip install paramiko`
 
 ### Linux
-- Instalar `lftp`: `sudo pacman -S lftp` (Arch/CachyOS) o `sudo apt install lftp` (Debian/Ubuntu)
 - Opcional: Python 3.6+ para versión multiplataforma
 
 ### Windows
@@ -498,7 +589,6 @@ Esta guía detallada explica cómo instalar y ejecutar automáticamente el scrip
 
 ### macOS
 - Homebrew (opcional pero recomendado)
-- Instalar `lftp`: `brew install lftp`
 
 ---
 

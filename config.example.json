@@ -4,7 +4,8 @@
     "user": "dein-benutzername",
     "password": "dein-ftp-passwort",
     "type": "ftp",
-    "remotePath": "/keepass_passwords.kdbx"
+    "remotePath": "/keepass_passwords.kdbx",
+    "comment": "Protokoll-Optionen: 'ftp' (Standard), 'sftp', 'smb', 'scp'"
   },
   "local": {
     "localPath": "keepass_passwords.kdbx",
@@ -22,6 +23,40 @@
     "comment": "Unterstützte Sprachen: 'de' (Deutsch), 'en' (English), 'es' (Español)",
     "cleanupLogs": true,
     "maxLogAgeDays": 7
+  },
+  "protocol_examples": {
+    "ftp": {
+      "host": "ftp.example.com",
+      "user": "username",
+      "password": "password",
+      "type": "ftp",
+      "port": 21,
+      "remotePath": "/keepass_passwords.kdbx"
+    },
+    "sftp": {
+      "host": "sftp.example.com",
+      "user": "username",
+      "password": "password",
+      "type": "sftp",
+      "port": 22,
+      "remotePath": "/home/user/keepass_passwords.kdbx"
+    },
+    "smb": {
+      "host": "fileserver.local",
+      "share": "Backups",
+      "user": "username",
+      "password": "password",
+      "domain": "WORKGROUP",
+      "type": "smb",
+      "remotePath": "keepass_passwords.kdbx"
+    },
+    "scp": {
+      "host": "ssh.example.com",
+      "user": "username",
+      "password": "password",
+      "type": "scp",
+      "port": 22,
+      "remotePath": "/home/user/keepass_passwords.kdbx"
+    }
   }
 }
-

@@ -84,8 +84,8 @@ Bei Fehlern siehst du detaillierte Fehlermeldungen im Log.
 ### Fehlerbehebung
 
 **Problem: "Konfigurationsdatei nicht gefunden"**
-- Stelle sicher, dass `config.json` im Hauptverzeichnis existiert
-- Kopiere `config.example.json` zu `config.json` falls nötig
+- Stelle sicher, dass `config.json` existiert. Nutze `python3 install.py` zum Erstellen.
+- Oder kopiere `config.example.json` zu `config.json` und bearbeite manuell
 
 **Problem: "KeePassXC-CLI nicht gefunden"**
 - Installiere KeePassXC: `sudo pacman -S keepassxc` (Arch/CachyOS)
@@ -94,6 +94,16 @@ Bei Fehlern siehst du detaillierte Fehlermeldungen im Log.
 **Problem: "FTP-Client nicht gefunden"**
 - Installiere lftp: `sudo pacman -S lftp` (Arch/CachyOS)
 - Oder: `sudo apt install lftp` (Debian/Ubuntu)
+
+**Problem: "SMB-Client nicht gefunden"** (nur bei SMB/CIFS)
+- Installiere smbclient: `sudo pacman -S samba` (Arch/CachyOS)
+- Oder: `sudo apt install samba-common` (Debian/Ubuntu)
+- Windows: Installiere Python-Library: `pip install pysmb`
+
+**Problem: "SCP-Tool nicht gefunden"** (nur bei SCP)
+- Installiere sshpass: `sudo pacman -S sshpass` (Arch/CachyOS)
+- Oder: `sudo apt install sshpass` (Debian/Ubuntu)
+- Windows: Installiere Python-Library: `pip install paramiko`
 
 ---
 
@@ -258,8 +268,8 @@ En errores verás mensajes de error detallados en el registro.
 ### Solución de Problemas
 
 **Problema: "Archivo de configuración no encontrado"**
-- Asegúrate de que `config.json` existe en el directorio principal
-- Copia `config.example.json` a `config.json` si es necesario
+- Asegúrate de que `config.json` existe. Usa `python3 install.py` para crearlo.
+- O copia `config.example.json` a `config.json` y edita manualmente
 
 **Problema: "KeePassXC-CLI no encontrado"**
 - Instala KeePassXC: `sudo pacman -S keepassxc` (Arch/CachyOS)
@@ -268,6 +278,16 @@ En errores verás mensajes de error detallados en el registro.
 **Problema: "Cliente FTP no encontrado"**
 - Instala lftp: `sudo pacman -S lftp` (Arch/CachyOS)
 - O: `sudo apt install lftp` (Debian/Ubuntu)
+
+**Problema: "Cliente SMB no encontrado"** (solo para SMB/CIFS)
+- Instala smbclient: `sudo pacman -S samba` (Arch/CachyOS)
+- O: `sudo apt install samba-common` (Debian/Ubuntu)
+- Windows: Instala biblioteca Python: `pip install pysmb`
+
+**Problema: "Herramienta SCP no encontrada"** (solo para SCP)
+- Instala sshpass: `sudo pacman -S sshpass` (Arch/CachyOS)
+- O: `sudo apt install sshpass` (Debian/Ubuntu)
+- Windows: Instala biblioteca Python: `pip install paramiko`
 
 ---
 
