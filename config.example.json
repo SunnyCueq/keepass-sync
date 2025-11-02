@@ -1,0 +1,27 @@
+{
+  "ftp": {
+    "host": "dein-server.com",
+    "user": "dein-benutzername",
+    "password": "dein-ftp-passwort",
+    "type": "ftp",
+    "remotePath": "/keepass_passwords.kdbx"
+  },
+  "local": {
+    "localPath": "keepass_passwords.kdbx",
+    "tempPath": "temp_keepass_passwords.kdbx",
+    "backupDir": "backups",
+    "maxBackups": 2
+  },
+  "keepass": {
+    "databasePassword": "dein-keeppass-master-passwort",
+    "keepassXCPath": "keepassxc-cli"
+  },
+  "settings": {
+    "debug": false,
+    "language": "de",
+    "comment": "Unterstützte Sprachen: 'de' (Deutsch), 'en' (English), 'es' (Español)",
+    "cleanupLogs": true,
+    "maxLogAgeDays": 7
+  }
+}
+

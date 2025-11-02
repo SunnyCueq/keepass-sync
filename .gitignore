@@ -1,0 +1,62 @@
+# Sensible Konfigurationsdateien (werden NICHT auf GitHub hochgeladen)
+config.json
+config.ini
+
+# Passwörter und sensible Daten
+*.kdbx
+*.kdbx.*
+*.key
+*.keyx
+
+# Log-Dateien
+*.log
+*_log.txt
+sync_log.txt
+ftp_log.txt
+winscp_log.txt
+sync_idle.log
+sync_cron.log
+
+# Backups
+backups/
+*.kdbx.bak
+
+# Temporäre Dateien
+temp_*
+tmp/
+*.tmp
+
+# Python (überall im Projekt)
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+*.pyc
+
+# Editor-Dateien
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# System-Dateien
+*.PRMTSi
+.DS_Store
+desktop.ini
+
+# Interne/Entwickler-Dateien (nicht für Endbenutzer)
+CHECKLIST.md
+FINAL_CHECK.md
+PROJECT_NAME.md
+BRAINSTORMING.md
+GITHUB_SETUP.md
+PREPARE_COMMIT.txt
+
