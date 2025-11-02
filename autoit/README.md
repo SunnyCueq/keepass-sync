@@ -53,11 +53,11 @@ AutoIt3.exe /in sync.au3 /out sync.exe
 
 #### 3. JSON.au3 Include
 
-Die Variante nutzt `JSON.au3` für JSON-Parsing. Stelle sicher, dass die Datei im `autoit/` Verzeichnis liegt oder im AutoIt Include-Pfad.
+✅ **Die benötigten Dateien sind bereits enthalten:**
+- `Json.au3` - JSON-Parser für AutoIt
+- `BinaryCall.au3` - Dependency für Json.au3
 
-**Download JSON.au3:**
-- Von: https://www.autoitscript.com/forum/topic/148114-a-non-strict-json-udf-jsmn/
-- Oder: https://github.com/JoshyPHP/AutoIt-JSON
+Die Dateien liegen bereits im `autoit/` Verzeichnis und werden automatisch eingebunden.
 
 ### Verwendung
 
@@ -107,8 +107,8 @@ Die AutoIt-Variante nutzt die gleiche `config.json` wie die Python-Variante.
 ### Fehlerbehebung
 
 **"JSON.au3 nicht gefunden"**
-- Lade `JSON.au3` von AutoIt-Forum herunter
-- Lege sie ins `autoit/` Verzeichnis
+- Die Dateien `Json.au3` und `BinaryCall.au3` sind bereits im `autoit/` Verzeichnis enthalten
+- Falls Probleme auftreten, stelle sicher, dass beide Dateien im selben Verzeichnis wie `sync.au3` liegen
 
 **"WinSCP.com nicht gefunden"**
 ```powershell
