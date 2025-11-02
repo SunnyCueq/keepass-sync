@@ -54,6 +54,10 @@ Der Installer:
 - Linux/macOS: `sshpass` installieren: `sudo pacman -S sshpass` oder `sudo apt install sshpass`
 - Windows: `paramiko` Python-Library: `pip install paramiko`
 
+**Datei-Überwachung (--watch):**
+- Linux: `pyinotify`: `pip install pyinotify`
+- macOS/Windows: `watchdog`: `pip install watchdog`
+
 ### Linux
 - Optional: Python 3.6+ für Cross-Platform-Version
 
@@ -78,6 +82,44 @@ Dieses Script installiert automatisch:
 - ✅ Cron-Job für Leerlauf-Sync (alle 5 Minuten)
 
 ---
+
+## CLI-Optionen & Features
+
+Das Script unterstützt verschiedene Optionen:
+
+```bash
+# Verbindung testen (ohne Sync, kein Backup)
+python3 python/sync_ftp.py --test
+
+# Status anzeigen
+python3 python/sync_ftp.py --status
+
+# Datei automatisch überwachen (läuft dauerhaft)
+python3 python/sync_ftp.py --watch
+
+# Normale Synchronisation
+python3 python/sync_ftp.py
+python3 python/sync_ftp.py --sync
+python3 python/sync_ftp.py -v  # Verbose
+python3 python/sync_ftp.py -q  # Quiet
+
+# Hilfe anzeigen
+python3 python/sync_ftp.py --help
+```
+
+### Retry-Konfiguration
+
+Du kannst Retry-Einstellungen in `config.json` hinzufügen:
+
+```json
+{
+  "settings": {
+    "max_retries": 3,
+    "retry_delay": 5,
+    "watch_delay": 30
+  }
+}
+```
 
 ## Automatische Ausführung einrichten
 

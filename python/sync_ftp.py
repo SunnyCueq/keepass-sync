@@ -11,6 +11,8 @@ import subprocess
 import shutil
 import json
 import glob
+import argparse
+import time
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -26,7 +28,7 @@ messages = {}
 def load_language(lang='de'):
     """Lade Sprachdatei im JSON-Format"""
     global messages
-    supported_languages = ['de', 'en', 'es']  # Unterstützte Sprachen
+    supported_languages = ['de', 'en', 'es', 'fr', 'it', 'pt', 'nl', 'pl', 'ru', 'zh', 'ja', 'ko']
     
     # Validiere Sprachcode
     if lang not in supported_languages:
@@ -196,17 +198,29 @@ def create_backup(local_db, backup_dir):
         write_log(f"{messages.get('MSG_BACKUP_FAIL', 'Backup fehlgeschlagen')}: {e}")
         return False
 
-def download_file(host, user, password, remote_path, temp_file, protocol='ftp', **kwargs):
-    """Lade Datei herunter - unterstützt FTP, SFTP, SMB, SCP"""
-    if protocol.lower() in ['ftp', 'sftp']:
-        return download_ftp(host, user, password, remote_path, temp_file, protocol)
-    elif protocol.lower() == 'smb':
-        return download_smb(host, kwargs.get('share', ''), user, password, remote_path, temp_file, kwargs.get('domain', 'WORKGROUP'))
-    elif protocol.lower() == 'scp':
-        return download_scp(host, user, password, remote_path, temp_file, kwargs.get('port', 22))
-    else:
-        write_log(f"Unbekanntes Protokoll: {protocol}")
-        return False
+def download_file(host, user, password, remote_path, temp_file, protocol='ftp', max_retries=3, initial_delay=5, **kwargs):
+    """Lade Datei herunter - unterstützt FTP, SFTP, SMB, SCP mit Retry-Logic"""
+    for attempt in range(max_retries):
+        if attempt > 0:
+            delay = min(initial_delay * (2 ** (attempt - 1)), 60)  # Exponential Backoff, max 60s
+            write_log(f"Wiederholung {attempt}/{max_retries-1} in {delay} Sekunden...")
+            time.sleep(delay)
+        
+        if protocol.lower() in ['ftp', 'sftp']:
+            result = download_ftp(host, user, password, remote_path, temp_file, protocol)
+        elif protocol.lower() == 'smb':
+            result = download_smb(host, kwargs.get('share', ''), user, password, remote_path, temp_file, kwargs.get('domain', 'WORKGROUP'))
+        elif protocol.lower() == 'scp':
+            result = download_scp(host, user, password, remote_path, temp_file, kwargs.get('port', 22))
+        else:
+            write_log(f"Unbekanntes Protokoll: {protocol}")
+            return False
+        
+        if result:
+            return True
+    
+    write_log(f"Download nach {max_retries} Versuchen fehlgeschlagen")
+    return False
 
 def download_ftp(host, user, password, remote_path, temp_file, ftp_type='ftp'):
     """Lade Datei vom FTP-Server herunter"""
@@ -301,17 +315,29 @@ def merge_databases(keepassxc, local_db, temp_db, password):
         write_log(f"{messages.get('MSG_MERGE_FAIL', 'Merge fehlgeschlagen')}: {e}")
         return False
 
-def upload_file(host, user, password, remote_path, local_file, protocol='ftp', **kwargs):
-    """Lade Datei hoch - unterstützt FTP, SFTP, SMB, SCP"""
-    if protocol.lower() in ['ftp', 'sftp']:
-        return upload_ftp(host, user, password, remote_path, local_file, protocol)
-    elif protocol.lower() == 'smb':
-        return upload_smb(host, kwargs.get('share', ''), user, password, remote_path, local_file, kwargs.get('domain', 'WORKGROUP'))
-    elif protocol.lower() == 'scp':
-        return upload_scp(host, user, password, remote_path, local_file, kwargs.get('port', 22))
-    else:
-        write_log(f"Unbekanntes Protokoll: {protocol}")
-        return False
+def upload_file(host, user, password, remote_path, local_file, protocol='ftp', max_retries=3, initial_delay=5, **kwargs):
+    """Lade Datei hoch - unterstützt FTP, SFTP, SMB, SCP mit Retry-Logic"""
+    for attempt in range(max_retries):
+        if attempt > 0:
+            delay = min(initial_delay * (2 ** (attempt - 1)), 60)  # Exponential Backoff, max 60s
+            write_log(f"Wiederholung {attempt}/{max_retries-1} in {delay} Sekunden...")
+            time.sleep(delay)
+        
+        if protocol.lower() in ['ftp', 'sftp']:
+            result = upload_ftp(host, user, password, remote_path, local_file, protocol)
+        elif protocol.lower() == 'smb':
+            result = upload_smb(host, kwargs.get('share', ''), user, password, remote_path, local_file, kwargs.get('domain', 'WORKGROUP'))
+        elif protocol.lower() == 'scp':
+            result = upload_scp(host, user, password, remote_path, local_file, kwargs.get('port', 22))
+        else:
+            write_log(f"Unbekanntes Protokoll: {protocol}")
+            return False
+        
+        if result:
+            return True
+    
+    write_log(f"Upload nach {max_retries} Versuchen fehlgeschlagen")
+    return False
 
 def upload_ftp(host, user, password, remote_path, local_file, ftp_type='ftp'):
     """Lade Datei zum FTP-Server hoch"""
@@ -605,6 +631,365 @@ def upload_scp(host, user, password, remote_path, local_file, port=22):
         write_log(f"{messages.get('MSG_UPLOAD_FAIL', 'Upload fehlgeschlagen')}: {e}")
         return False
 
+def test_connection(config):
+    """Teste Verbindung zum Server und prüfe Konfiguration"""
+    write_log("=== Verbindungs-Test ===")
+    errors = []
+    
+    # KeePassXC prüfen
+    keepassxc = find_executable(config['keepassxc'])
+    if not keepassxc:
+        errors.append(f"❌ {messages.get('MSG_KEEPASSXC_NOT_FOUND', 'KeePassXC-CLI nicht gefunden')}")
+    else:
+        write_log(f"✅ KeePassXC-CLI gefunden: {keepassxc}")
+    
+    # Lokale Datei prüfen
+    if os.path.exists(config['local_db']):
+        size = os.path.getsize(config['local_db'])
+        mtime = datetime.fromtimestamp(os.path.getmtime(config['local_db']))
+        write_log(f"✅ Lokale Datenbank: {config['local_db']} ({size} bytes, modifiziert: {mtime.strftime('%Y-%m-%d %H:%M:%S')})")
+    else:
+        errors.append(f"⚠️ Lokale Datenbank nicht gefunden: {config['local_db']}")
+    
+    # Verbindung testen
+    protocol = config['protocol']
+    write_log(f"Teste Verbindung ({protocol.upper()})...")
+    
+    if protocol in ['ftp', 'sftp']:
+        # Test-Download (nur Verbindung prüfen)
+        test_file = config['temp_db'] + '.test'
+        try:
+            # Versuche Verbindung herzustellen (ohne Datei zu laden)
+            if protocol == 'ftp':
+                test_cmd = ['lftp', '-u', f"{config['user']},{config['password']}", f"ftp://{config['host']}", '-e', 'quit']
+            else:
+                test_cmd = ['lftp', '-u', f"{config['user']},{config['password']}", f"sftp://{config['host']}", '-e', 'set sftp:connect-program "ssh -a -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"; quit']
+            
+            process = subprocess.run(test_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=10)
+            if process.returncode == 0:
+                write_log(f"✅ Verbindung zum Server erfolgreich: {config['host']}")
+            else:
+                errors.append(f"❌ Verbindung fehlgeschlagen: {process.stderr.decode('utf-8', errors='ignore')}")
+        except subprocess.TimeoutExpired:
+            errors.append("❌ Verbindung fehlgeschlagen: Timeout")
+        except FileNotFoundError:
+            errors.append(f"❌ {messages.get('MSG_FTP_CLIENT_NOT_FOUND', 'FTP-Client nicht gefunden')}")
+        except Exception as e:
+            errors.append(f"❌ Verbindung fehlgeschlagen: {e}")
+    
+    elif protocol == 'smb':
+        if platform.system() == 'Windows':
+            write_log("⚠️ SMB-Test auf Windows: Bitte manuell prüfen")
+        else:
+            try:
+                smb_url = f"//{config['host']}/{config['share']}"
+                cmd = ['smbclient', smb_url, '-U', f"{config['domain']}\\{config['user']}%{config['password']}", '-c', 'ls']
+                process = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=10)
+                if process.returncode == 0:
+                    write_log(f"✅ SMB-Verbindung erfolgreich: {smb_url}")
+                else:
+                    errors.append(f"❌ SMB-Verbindung fehlgeschlagen: {process.stderr.decode('utf-8', errors='ignore')}")
+            except FileNotFoundError:
+                errors.append("❌ smbclient nicht gefunden")
+            except Exception as e:
+                errors.append(f"❌ SMB-Verbindung fehlgeschlagen: {e}")
+    
+    elif protocol == 'scp':
+        try:
+            if platform.system() != 'Windows':
+                cmd = ['sshpass', '-p', config['password'], 'ssh', '-o', 'ConnectTimeout=10', '-o', 'StrictHostKeyChecking=no', '-o', 'UserKnownHostsFile=/dev/null', '-p', str(config['port']), f"{config['user']}@{config['host']}", 'echo "OK"']
+                process = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=10)
+                if process.returncode == 0:
+                    write_log(f"✅ SCP/SSH-Verbindung erfolgreich: {config['host']}:{config['port']}")
+                else:
+                    errors.append(f"❌ SCP-Verbindung fehlgeschlagen: {process.stderr.decode('utf-8', errors='ignore')}")
+            else:
+                write_log("⚠️ SCP-Test auf Windows: Bitte manuell prüfen (paramiko)")
+        except FileNotFoundError:
+            errors.append("❌ sshpass nicht gefunden")
+        except Exception as e:
+            errors.append(f"❌ SCP-Verbindung fehlgeschlagen: {e}")
+    
+    # Zusammenfassung
+    write_log("=== Test abgeschlossen ===")
+    if errors:
+        write_log("Fehler gefunden:")
+        for error in errors:
+            write_log(error)
+        return False
+    else:
+        write_log("✅ Alle Tests erfolgreich!")
+        return True
+
+def show_status(config):
+    """Zeige Status-Informationen"""
+    write_log("=== KeePass Sync Status ===")
+    
+    # Lokale Datei
+    if os.path.exists(config['local_db']):
+        size = os.path.getsize(config['local_db'])
+        mtime = datetime.fromtimestamp(os.path.getmtime(config['local_db']))
+        age = datetime.now() - mtime
+        write_log(f"Lokale DB: {config['local_db']}")
+        write_log(f"  Größe: {size:,} bytes ({size/1024:.2f} KB)")
+        write_log(f"  Modifiziert: {mtime.strftime('%Y-%m-%d %H:%M:%S')} (vor {age.days}d {age.seconds//3600}h)")
+    else:
+        write_log(f"⚠️ Lokale DB nicht gefunden: {config['local_db']}")
+    
+    # Backups
+    backup_dir = config['backup_dir']
+    if os.path.exists(backup_dir):
+        backups = sorted(glob.glob(os.path.join(backup_dir, "*.kdbx")), key=os.path.getmtime, reverse=True)
+        write_log(f"Backups: {len(backups)} gefunden")
+        for i, backup in enumerate(backups[:3], 1):
+            size = os.path.getsize(backup)
+            mtime = datetime.fromtimestamp(os.path.getmtime(backup))
+            write_log(f"  {i}. {os.path.basename(backup)} ({size/1024:.2f} KB, {mtime.strftime('%Y-%m-%d %H:%M:%S')})")
+    else:
+        write_log(f"⚠️ Backup-Verzeichnis nicht gefunden: {backup_dir}")
+    
+    # Konfiguration
+    write_log(f"Protokoll: {config['protocol'].upper()}")
+    write_log(f"Server: {config.get('host', 'N/A')}")
+    write_log(f"Benutzer: {config.get('user', 'N/A')}")
+    
+    # KeePassXC
+    keepassxc = find_executable(config['keepassxc'])
+    if keepassxc:
+        write_log(f"KeePassXC-CLI: ✅ {keepassxc}")
+    else:
+        write_log(f"KeePassXC-CLI: ❌ Nicht gefunden")
+
+def watch_file(config, delay=30):
+    """Überwache Datei auf Änderungen und starte Sync automatisch"""
+    write_log(f"=== Datei-Überwachung aktiviert (Verzögerung: {delay}s) ===")
+    
+    try:
+        if platform.system() == 'Linux':
+            try:
+                import pyinotify
+                wm = pyinotify.WatchManager()
+                mask = pyinotify.IN_MODIFY | pyinotify.IN_CLOSE_WRITE
+            
+                class EventHandler(pyinotify.ProcessEvent):
+                    def __init__(self, config, delay):
+                        self.config = config
+                        self.delay = delay
+                        self.last_trigger = 0
+                    
+                    def process_IN_MODIFY(self, event):
+                        self.trigger_sync()
+                    
+                    def process_IN_CLOSE_WRITE(self, event):
+                        self.trigger_sync()
+                    
+                    def trigger_sync(self):
+                        now = time.time()
+                        if now - self.last_trigger < self.delay:
+                            return
+                        self.last_trigger = now
+                        write_log(f"Datei-Änderung erkannt, starte Sync in {self.delay}s...")
+                        time.sleep(self.delay)
+                        write_log("Starte Synchronisation...")
+                        perform_sync(self.config)
+                
+                handler = EventHandler(config, delay)
+                notifier = pyinotify.Notifier(wm, handler)
+                wm.add_watch(config['local_db'], mask)
+                write_log(f"Überwache: {config['local_db']}")
+                notifier.loop()
+            except ImportError:
+                write_log("⚠️ pyinotify nicht installiert. Installiere mit: pip install pyinotify")
+                write_log("Fallback: Polling-Modus...")
+                watch_file_polling(config, delay)
+        else:
+            # macOS/Windows: watchdog oder Polling
+            try:
+                from watchdog.observers import Observer
+                from watchdog.events import FileSystemEventHandler
+                
+                class SyncHandler(FileSystemEventHandler):
+                    def __init__(self, config, delay):
+                        self.config = config
+                        self.delay = delay
+                        self.last_trigger = 0
+                    
+                    def on_modified(self, event):
+                        if event.src_path == self.config['local_db']:
+                            self.trigger_sync()
+                    
+                    def trigger_sync(self):
+                        now = time.time()
+                        if now - self.last_trigger < self.delay:
+                            return
+                        self.last_trigger = now
+                        write_log(f"Datei-Änderung erkannt, starte Sync in {self.delay}s...")
+                        time.sleep(self.delay)
+                        write_log("Starte Synchronisation...")
+                        perform_sync(self.config)
+                
+                event_handler = SyncHandler(config, delay)
+                observer = Observer()
+                observer.schedule(event_handler, os.path.dirname(config['local_db']), recursive=False)
+                observer.start()
+                write_log(f"Überwache: {config['local_db']}")
+                try:
+                    while True:
+                        time.sleep(1)
+                except KeyboardInterrupt:
+                    observer.stop()
+                observer.join()
+            except ImportError:
+                write_log("⚠️ watchdog nicht installiert. Installiere mit: pip install watchdog")
+                write_log("Fallback: Polling-Modus...")
+                watch_file_polling(config, delay)
+    except Exception as e:
+        write_log(f"Fehler bei Datei-Überwachung: {e}")
+        write_log("Fallback: Polling-Modus...")
+        watch_file_polling(config, delay)
+
+def watch_file_polling(config, delay=30):
+    """Polling-basierte Datei-Überwachung (Fallback)"""
+    write_log(f"Polling-Modus: Prüfe alle {delay} Sekunden...")
+    last_mtime = os.path.getmtime(config['local_db']) if os.path.exists(config['local_db']) else 0
+    
+    try:
+        while True:
+            time.sleep(delay)
+            if os.path.exists(config['local_db']):
+                current_mtime = os.path.getmtime(config['local_db'])
+                if current_mtime > last_mtime:
+                    write_log("Datei-Änderung erkannt, starte Sync...")
+                    last_mtime = current_mtime
+                    perform_sync(config)
+    except KeyboardInterrupt:
+        write_log("Überwachung beendet")
+
+def perform_sync(config, skip_backup=False):
+    """Führe Synchronisation durch (kann von watch_file aufgerufen werden)"""
+    # KeePassXC finden
+    keepassxc = find_executable(config['keepassxc'])
+    if not keepassxc:
+        write_log(messages.get("MSG_KEEPASSXC_NOT_FOUND", "KeePassXC-CLI nicht gefunden"))
+        return False
+    
+    config['keepassxc'] = keepassxc
+    
+    # Backup erstellen (optional)
+    if not skip_backup:
+        write_log(messages.get("MSG_BACKUP", "Erstelle Backup..."))
+        create_backup(config['local_db'], config['backup_dir'])
+        cleanup_old_backups(config['backup_dir'], config['max_backups'])
+    
+    # Retry-Einstellungen aus Config
+    max_retries = config.get('max_retries', 3)
+    retry_delay = config.get('retry_delay', 5)
+    
+    # Download (abhängig vom Protokoll)
+    protocol = config['protocol']
+    if protocol in ['ftp', 'sftp']:
+        success = download_file(
+            config['host'],
+            config['user'],
+            config['password'],
+            config['remote_path'],
+            config['temp_db'],
+            protocol=protocol,
+            max_retries=max_retries,
+            initial_delay=retry_delay
+        )
+    elif protocol == 'smb':
+        success = download_file(
+            config['host'],
+            config['user'],
+            config['password'],
+            config['remote_path'],
+            config['temp_db'],
+            protocol=protocol,
+            max_retries=max_retries,
+            initial_delay=retry_delay,
+            share=config['share'],
+            domain=config['domain']
+        )
+    elif protocol == 'scp':
+        success = download_file(
+            config['host'],
+            config['user'],
+            config['password'],
+            config['remote_path'],
+            config['temp_db'],
+            protocol=protocol,
+            max_retries=max_retries,
+            initial_delay=retry_delay,
+            port=config['port']
+        )
+    else:
+        write_log(f"Unbekanntes Protokoll: {protocol}")
+        return False
+    
+    if not success:
+        return False
+    
+    # Merge
+    if not merge_databases(
+        config['keepassxc'],
+        config['local_db'],
+        config['temp_db'],
+        config['db_password']
+    ):
+        return False
+    
+    # Upload (abhängig vom Protokoll)
+    if protocol in ['ftp', 'sftp']:
+        success = upload_file(
+            config['host'],
+            config['user'],
+            config['password'],
+            config['remote_path'],
+            config['local_db'],
+            protocol=protocol,
+            max_retries=max_retries,
+            initial_delay=retry_delay
+        )
+    elif protocol == 'smb':
+        success = upload_file(
+            config['host'],
+            config['user'],
+            config['password'],
+            config['remote_path'],
+            config['local_db'],
+            protocol=protocol,
+            max_retries=max_retries,
+            initial_delay=retry_delay,
+            share=config['share'],
+            domain=config['domain']
+        )
+    elif protocol == 'scp':
+        success = upload_file(
+            config['host'],
+            config['user'],
+            config['password'],
+            config['remote_path'],
+            config['local_db'],
+            protocol=protocol,
+            max_retries=max_retries,
+            initial_delay=retry_delay,
+            port=config['port']
+        )
+    else:
+        write_log(f"Unbekanntes Protokoll: {protocol}")
+        return False
+    
+    if not success:
+        return False
+    
+    # Aufräumen
+    if os.path.exists(config['temp_db']):
+        os.remove(config['temp_db'])
+    
+    write_log(messages.get("MSG_SYNC_COMPLETE", "Synchronisation abgeschlossen"))
+    return True
+
 def main():
     """Hauptfunktion"""
     # Arbeitsverzeichnis auf Hauptverzeichnis setzen (ein Level nach oben von python/)
@@ -612,9 +997,38 @@ def main():
     base_dir = os.path.dirname(script_dir)  # Ein Level nach oben
     os.chdir(base_dir)
     
+    # CLI-Argumente parsen
+    parser = argparse.ArgumentParser(
+        description='KeePass Sync - Synchronisiere KeePass-Datenbanken über FTP/SFTP/SMB/SCP',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Beispiele:
+  python3 sync_ftp.py              # Normale Synchronisation
+  python3 sync_ftp.py --test       # Verbindung testen
+  python3 sync_ftp.py --status     # Status anzeigen
+  python3 sync_ftp.py --watch      # Datei überwachen und automatisch syncen
+  python3 sync_ftp.py --config alt_config.json  # Alternative Config verwenden
+        """
+    )
+    parser.add_argument('--sync', action='store_true', help='Synchronisation ausführen (Standard)')
+    parser.add_argument('--test', action='store_true', help='Verbindung testen (ohne Sync)')
+    parser.add_argument('--status', action='store_true', help='Status anzeigen')
+    parser.add_argument('--watch', action='store_true', help='Datei überwachen und automatisch syncen')
+    parser.add_argument('--config', type=str, help='Alternative Config-Datei verwenden')
+    parser.add_argument('--verbose', '-v', action='store_true', help='Detaillierte Ausgabe')
+    parser.add_argument('--quiet', '-q', action='store_true', help='Nur Fehler ausgeben')
+    parser.add_argument('--version', action='version', version='KeePass Sync 1.1.0')
+    
+    args = parser.parse_args()
+    
+    # Globale CONFIG_FILE überschreiben wenn angegeben
+    global CONFIG_FILE
+    if args.config:
+        CONFIG_FILE = args.config
+    
     # Sprache beim Start laden (aus System oder Config)
     system_lang = os.environ.get('LANG', '').split('_')[0] or os.environ.get('LC_ALL', '').split('_')[0]
-    supported_languages = ['de', 'en', 'es']
+    supported_languages = ['de', 'en', 'es', 'fr', 'it', 'pt', 'nl', 'pl', 'ru', 'zh', 'ja', 'ko']
     if system_lang not in supported_languages:
         system_lang = 'de'  # Standard: Deutsch
     
@@ -627,148 +1041,66 @@ def main():
     # Sprache aus Config verwenden
     load_language(config['language'])
     
-    # Aufräumen: Alte Logs und temporäre Dateien
-    if config.get('cleanup_logs', True):
-        cleanup_old_logs(config.get('max_log_age', 7))
+    # Retry-Einstellungen zu Config hinzufügen
+    config['max_retries'] = config.get('max_retries', 3)
+    config['retry_delay'] = config.get('retry_delay', 5)
     
-    # Temporäre Dateien und Python-Cache aufräumen
-    for temp_pattern in ['temp_*', '*.tmp']:
-        for temp_file in glob.glob(temp_pattern):
-            try:
-                if os.path.isfile(temp_file):
-                    os.remove(temp_file)
-            except Exception:
-                pass
+    # Debug-Modus aktivieren wenn verbose
+    if args.verbose:
+        config['debug'] = True
     
-    # Python-Cache aufräumen (falls vorhanden)
-    for pycache_dir in ['__pycache__', 'python/__pycache__']:
-        if os.path.exists(pycache_dir):
-            try:
-                shutil.rmtree(pycache_dir)
-            except Exception:
-                pass
+    # Aufräumen: Alte Logs und temporäre Dateien (nur bei Sync)
+    if not (args.test or args.status):
+        if config.get('cleanup_logs', True):
+            cleanup_old_logs(config.get('max_log_age', 7))
+        
+        # Temporäre Dateien und Python-Cache aufräumen
+        for temp_pattern in ['temp_*', '*.tmp']:
+            for temp_file in glob.glob(temp_pattern):
+                try:
+                    if os.path.isfile(temp_file):
+                        os.remove(temp_file)
+                except Exception:
+                    pass
+        
+        # Python-Cache aufräumen (falls vorhanden)
+        for pycache_dir in ['__pycache__', 'python/__pycache__']:
+            if os.path.exists(pycache_dir):
+                try:
+                    shutil.rmtree(pycache_dir)
+                except Exception:
+                    pass
+        
+        # Log-Dateien löschen (neues Log starten)
+        if os.path.exists(LOG_FILE):
+            os.remove(LOG_FILE)
+        if os.path.exists(FTP_LOG):
+            os.remove(FTP_LOG)
     
-    # Log-Dateien löschen (neues Log starten)
-    if os.path.exists(LOG_FILE):
-        os.remove(LOG_FILE)
-    if os.path.exists(FTP_LOG):
-        os.remove(FTP_LOG)
-    
-    write_log(f"=== KeePass Sync - {platform.system()} ===")
+    if not args.quiet:
+        write_log(f"=== KeePass Sync - {platform.system()} ===")
     
     # Debug-Ausgabe
-    if config['debug']:
+    if config['debug'] and not args.quiet:
         write_log(f"Debug: KEEPASSXC={config['keepassxc']}")
         write_log(f"Debug: PROTOCOL={config['protocol']}")
         write_log(f"Debug: HOST={config.get('host', 'N/A')}")
         write_log(f"Debug: USER={config.get('user', 'N/A')}")
     
-    # KeePassXC finden
-    keepassxc = find_executable(config['keepassxc'])
-    if not keepassxc:
-        write_log(messages.get("MSG_KEEPASSXC_NOT_FOUND", "KeePassXC-CLI nicht gefunden"))
-        sys.exit(1)
-    
-    config['keepassxc'] = keepassxc
-    
-    # Backup erstellen
-    write_log(messages.get("MSG_BACKUP", "Erstelle Backup..."))
-    create_backup(config['local_db'], config['backup_dir'])
-    
-    # Alte Backups aufräumen
-    cleanup_old_backups(config['backup_dir'], config['max_backups'])
-    
-    # Download (abhängig vom Protokoll)
-    protocol = config['protocol']
-    if protocol in ['ftp', 'sftp']:
-        success = download_file(
-            config['host'],
-            config['user'],
-            config['password'],
-            config['remote_path'],
-            config['temp_db'],
-            protocol=protocol
-        )
-    elif protocol == 'smb':
-        success = download_file(
-            config['host'],
-            config['user'],
-            config['password'],
-            config['remote_path'],
-            config['temp_db'],
-            protocol=protocol,
-            share=config['share'],
-            domain=config['domain']
-        )
-    elif protocol == 'scp':
-        success = download_file(
-            config['host'],
-            config['user'],
-            config['password'],
-            config['remote_path'],
-            config['temp_db'],
-            protocol=protocol,
-            port=config['port']
-        )
+    # Aktionen basierend auf Argumenten
+    if args.test:
+        success = test_connection(config)
+        sys.exit(0 if success else 1)
+    elif args.status:
+        show_status(config)
+        sys.exit(0)
+    elif args.watch:
+        watch_delay = config.get('watch_delay', 30)
+        watch_file(config, watch_delay)
     else:
-        write_log(f"Unbekanntes Protokoll: {protocol}")
-        sys.exit(1)
-    
-    if not success:
-        sys.exit(1)
-    
-    # Merge
-    if not merge_databases(
-        config['keepassxc'],
-        config['local_db'],
-        config['temp_db'],
-        config['db_password']
-    ):
-        sys.exit(1)
-    
-    # Upload (abhängig vom Protokoll)
-    if protocol in ['ftp', 'sftp']:
-        success = upload_file(
-            config['host'],
-            config['user'],
-            config['password'],
-            config['remote_path'],
-            config['local_db'],
-            protocol=protocol
-        )
-    elif protocol == 'smb':
-        success = upload_file(
-            config['host'],
-            config['user'],
-            config['password'],
-            config['remote_path'],
-            config['local_db'],
-            protocol=protocol,
-            share=config['share'],
-            domain=config['domain']
-        )
-    elif protocol == 'scp':
-        success = upload_file(
-            config['host'],
-            config['user'],
-            config['password'],
-            config['remote_path'],
-            config['local_db'],
-            protocol=protocol,
-            port=config['port']
-        )
-    else:
-        write_log(f"Unbekanntes Protokoll: {protocol}")
-        sys.exit(1)
-    
-    if not success:
-        sys.exit(1)
-    
-    # Aufräumen
-    if os.path.exists(config['temp_db']):
-        os.remove(config['temp_db'])
-    
-    write_log(messages.get("MSG_SYNC_COMPLETE", "Synchronisation abgeschlossen"))
+        # Normale Synchronisation
+        success = perform_sync(config)
+        sys.exit(0 if success else 1)
 
 if __name__ == '__main__':
     main()

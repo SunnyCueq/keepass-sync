@@ -46,21 +46,61 @@ bash linux/sync_ftp.sh
 - Ruft automatisch `python/sync_ftp.py` auf
 - Falls Python nicht gefunden: Fehlermeldung
 
+### Verbindung testen (ohne Sync)
+
+**Wichtig:** Teste zuerst die Verbindung, bevor du eine vollständige Synchronisation durchführst:
+
+```bash
+python3 python/sync_ftp.py --test
+```
+
+Dies prüft:
+- ✅ KeePassXC-CLI Verfügbarkeit
+- ✅ Lokale Datenbank-Existenz
+- ✅ Server-Verbindung (FTP/SFTP/SMB/SCP)
+- ✅ Kein Backup nötig
+- ✅ Keine Datenänderung
+
+**Erwartete Ausgabe:**
+```
+=== Verbindungs-Test ===
+✅ KeePassXC-CLI gefunden: /usr/bin/keepassxc-cli
+✅ Lokale Datenbank: keepass_passwords.kdbx (1234567 bytes, modifiziert: 2025-01-15 14:30:22)
+Teste Verbindung (FTP)...
+✅ Verbindung zum Server erfolgreich: dein-server.com
+=== Test abgeschlossen ===
+✅ Alle Tests erfolgreich!
+```
+
+### Status anzeigen
+
+Zeige aktuelle Status-Informationen:
+
+```bash
+python3 python/sync_ftp.py --status
+```
+
+**Zeigt:**
+- Lokale DB-Informationen (Größe, Alter, letzte Änderung)
+- Backup-Übersicht (Anzahl, Größe, Datum)
+- Konfigurations-Details (Protokoll, Server, Benutzer)
+- KeePassXC-CLI Status
+
 ### Test mit Debug-Modus
 
-Aktiviere Debug in `config.json`:
+Aktiviere Debug in `config.json` oder nutze `--verbose`:
 
+```bash
+python3 python/sync_ftp.py -v
+```
+
+Oder in `config.json`:
 ```json
 {
   "settings": {
     "debug": true
   }
 }
-```
-
-Dann ausführen:
-```bash
-python3 python/sync_ftp.py
 ```
 
 ### Erwartete Ausgabe
@@ -104,6 +144,55 @@ Bei Fehlern siehst du detaillierte Fehlermeldungen im Log.
 - Installiere sshpass: `sudo pacman -S sshpass` (Arch/CachyOS)
 - Oder: `sudo apt install sshpass` (Debian/Ubuntu)
 - Windows: Installiere Python-Library: `pip install paramiko`
+
+**Problem: "Datei-Überwachung funktioniert nicht"** (nur bei --watch)
+- Linux: Installiere `pip install pyinotify`
+- macOS/Windows: Installiere `pip install watchdog`
+- Fallback: Polling-Modus wird automatisch verwendet
+
+### Weitere CLI-Optionen
+
+**Alle verfügbaren Optionen:**
+```bash
+python3 python/sync_ftp.py --help
+```
+
+**Beispiele:**
+```bash
+# Normale Synchronisation
+python3 python/sync_ftp.py
+python3 python/sync_ftp.py --sync
+
+# Verbose (Debug-Ausgabe)
+python3 python/sync_ftp.py -v
+
+# Quiet (nur Fehler)
+python3 python/sync_ftp.py -q
+
+# Alternative Config-Datei
+python3 python/sync_ftp.py --config alt_config.json
+
+# Version anzeigen
+python3 python/sync_ftp.py --version
+```
+
+### Datei-Überwachung testen
+
+Teste automatische Synchronisation bei Datei-Änderung:
+
+```bash
+python3 python/sync_ftp.py --watch
+```
+
+**Was passiert:**
+- Script läuft dauerhaft im Hintergrund
+- Überwacht die lokale Datenbank-Datei
+- Startet automatisch Sync bei Änderung (nach konfigurierbarer Verzögerung)
+- Beenden mit `Ctrl+C`
+
+**Hinweis:** Installiere zuerst die benötigte Library:
+- Linux: `pip install pyinotify`
+- macOS/Windows: `pip install watchdog`
 
 ---
 

@@ -95,10 +95,16 @@ python3 python/sync_ftp.py
 2025-11-02 17:XX:XX Synchronisation abgeschlossen.
 ```
 
+**Tipp:** Teste zuerst die Verbindung ohne Backup:
+```bash
+python3 python/sync_ftp.py --test
+```
+
 **Fehlerbehebung:**
 - **"Konfigurationsdatei nicht gefunden"** → Stelle sicher, dass `config.json` existiert
 - **"KeePassXC-CLI nicht gefunden"** → Installiere: `sudo pacman -S keepassxc` (Arch) oder `sudo apt install keepassxc` (Debian)
 - **"FTP-Client nicht gefunden"** → Installiere: `sudo pacman -S lftp` (Arch) oder `sudo apt install lftp` (Debian)
+- **Datei-Überwachung funktioniert nicht** → Installiere: `pip install pyinotify` (Linux) oder `pip install watchdog` (alle Plattformen)
 
 📖 **Detaillierte Test-Anleitung:** [TEST.md](TEST.md)
 
@@ -140,7 +146,76 @@ Das Script synchronisiert deine KeePass-Datenbank in 4 Schritten:
 
 ### 🌍 Mehrsprachigkeit
 
-Das Script unterstützt **Deutsch**, **Englisch** und **Spanisch**. Die Sprache wird automatisch erkannt oder kann in `config.json` eingestellt werden:
+Das Script unterstützt **12 Sprachen**: Deutsch (de), English (en), Español (es), Français (fr), Italiano (it), Português (pt), Nederlands (nl), Polski (pl), Русский (ru), 中文 (zh), 日本語 (ja), 한국어 (ko).
+
+Die Sprache wird automatisch erkannt oder kann in `config.json` eingestellt werden:
+```json
+{
+  "settings": {
+    "language": "de"
+  }
+}
+```
+
+### 🎯 CLI-Optionen & Features
+
+Das Script bietet verschiedene Optionen für unterschiedliche Anwendungsfälle:
+
+**Verbindung testen (ohne Sync):**
+```bash
+python3 python/sync_ftp.py --test
+```
+- ✅ Prüft KeePassXC-CLI Verfügbarkeit
+- ✅ Prüft lokale Datenbank
+- ✅ Testet Server-Verbindung
+- ✅ Kein Backup nötig, keine Datenänderung
+
+**Status anzeigen:**
+```bash
+python3 python/sync_ftp.py --status
+```
+Zeigt:
+- Lokale DB-Informationen (Größe, Alter)
+- Backup-Übersicht
+- Konfigurations-Details
+
+**Datei automatisch überwachen:**
+```bash
+python3 python/sync_ftp.py --watch
+```
+- Startet automatisch Sync bei Änderung der lokalen Datenbank
+- Verzögerung konfigurierbar (Standard: 30 Sekunden)
+- Läuft dauerhaft im Hintergrund
+
+**Normale Synchronisation:**
+```bash
+python3 python/sync_ftp.py        # Standard-Sync
+python3 python/sync_ftp.py --sync # Explizit Sync
+python3 python/sync_ftp.py -v     # Verbose (Debug-Ausgabe)
+python3 python/sync_ftp.py -q     # Quiet (nur Fehler)
+```
+
+**Weitere Optionen:**
+```bash
+python3 python/sync_ftp.py --config alt_config.json  # Alternative Config
+python3 python/sync_ftp.py --help                     # Hilfe anzeigen
+python3 python/sync_ftp.py --version                  # Version anzeigen
+```
+
+### 🔄 Verbesserte Retry-Logic
+
+Das Script versucht automatisch, fehlgeschlagene Operationen erneut auszuführen:
+- **Exponential Backoff**: 5s → 10s → 20s → max 60s
+- **Konfigurierbar** in `config.json`:
+```json
+{
+  "settings": {
+    "max_retries": 3,
+    "retry_delay": 5
+  }
+}
+```
+- Resilient gegen temporäre Netzwerkfehler
 
 ### 📡 Unterstützte Protokolle
 
@@ -324,7 +399,76 @@ The script synchronizes your KeePass database in 4 steps:
 
 ### 🌍 Multi-language Support
 
-The script supports **German**, **English**, and **Spanish**. Language is automatically detected or can be set in `config.json`:
+The script supports **12 languages**: German (de), English (en), Spanish (es), French (fr), Italian (it), Portuguese (pt), Dutch (nl), Polish (pl), Russian (ru), Chinese (zh), Japanese (ja), Korean (ko).
+
+Language is automatically detected or can be set in `config.json`:
+```json
+{
+  "settings": {
+    "language": "en"
+  }
+}
+```
+
+### 🎯 CLI Options & Features
+
+The script offers various options for different use cases:
+
+**Test connection (without sync):**
+```bash
+python3 python/sync_ftp.py --test
+```
+- ✅ Checks KeePassXC-CLI availability
+- ✅ Checks local database
+- ✅ Tests server connection
+- ✅ No backup needed, no data changes
+
+**Show status:**
+```bash
+python3 python/sync_ftp.py --status
+```
+Shows:
+- Local DB information (size, age)
+- Backup overview
+- Configuration details
+
+**Auto-watch file:**
+```bash
+python3 python/sync_ftp.py --watch
+```
+- Automatically starts sync when local database changes
+- Configurable delay (default: 30 seconds)
+- Runs continuously in background
+
+**Normal synchronization:**
+```bash
+python3 python/sync_ftp.py        # Standard sync
+python3 python/sync_ftp.py --sync # Explicit sync
+python3 python/sync_ftp.py -v     # Verbose (debug output)
+python3 python/sync_ftp.py -q     # Quiet (errors only)
+```
+
+**More options:**
+```bash
+python3 python/sync_ftp.py --config alt_config.json  # Alternative config
+python3 python/sync_ftp.py --help                     # Show help
+python3 python/sync_ftp.py --version                  # Show version
+```
+
+### 🔄 Improved Retry Logic
+
+The script automatically retries failed operations:
+- **Exponential Backoff**: 5s → 10s → 20s → max 60s
+- **Configurable** in `config.json`:
+```json
+{
+  "settings": {
+    "max_retries": 3,
+    "retry_delay": 5
+  }
+}
+```
+- Resilient against temporary network errors
 
 ### 📡 Supported Protocols
 
@@ -508,7 +652,76 @@ El script sincroniza tu base de datos KeePass en 4 pasos:
 
 ### 🌍 Soporte Multiidioma
 
-El script soporta **Alemán**, **Inglés** y **Español**. El idioma se detecta automáticamente o se puede configurar en `config.json`:
+El script soporta **12 idiomas**: Alemán (de), Inglés (en), Español (es), Francés (fr), Italiano (it), Portugués (pt), Neerlandés (nl), Polaco (pl), Ruso (ru), Chino (zh), Japonés (ja), Coreano (ko).
+
+El idioma se detecta automáticamente o se puede configurar en `config.json`:
+```json
+{
+  "settings": {
+    "language": "es"
+  }
+}
+```
+
+### 🎯 Opciones CLI y Características
+
+El script ofrece varias opciones para diferentes casos de uso:
+
+**Probar conexión (sin sincronización):**
+```bash
+python3 python/sync_ftp.py --test
+```
+- ✅ Verifica disponibilidad de KeePassXC-CLI
+- ✅ Verifica base de datos local
+- ✅ Prueba conexión al servidor
+- ✅ No se necesita respaldo, no hay cambios de datos
+
+**Mostrar estado:**
+```bash
+python3 python/sync_ftp.py --status
+```
+Muestra:
+- Información de la BD local (tamaño, antigüedad)
+- Resumen de respaldos
+- Detalles de configuración
+
+**Vigilar archivo automáticamente:**
+```bash
+python3 python/sync_ftp.py --watch
+```
+- Inicia automáticamente la sincronización cuando cambia la base de datos local
+- Retraso configurable (por defecto: 30 segundos)
+- Se ejecuta continuamente en segundo plano
+
+**Sincronización normal:**
+```bash
+python3 python/sync_ftp.py        # Sincronización estándar
+python3 python/sync_ftp.py --sync # Sincronización explícita
+python3 python/sync_ftp.py -v     # Verboso (salida de depuración)
+python3 python/sync_ftp.py -q     # Silencioso (solo errores)
+```
+
+**Más opciones:**
+```bash
+python3 python/sync_ftp.py --config alt_config.json  # Config alternativo
+python3 python/sync_ftp.py --help                     # Mostrar ayuda
+python3 python/sync_ftp.py --version                  # Mostrar versión
+```
+
+### 🔄 Lógica de Reintento Mejorada
+
+El script reintenta automáticamente las operaciones fallidas:
+- **Exponential Backoff**: 5s → 10s → 20s → máx 60s
+- **Configurable** en `config.json`:
+```json
+{
+  "settings": {
+    "max_retries": 3,
+    "retry_delay": 5
+  }
+}
+```
+- Resistente a errores temporales de red
 
 ### 📡 Protocolos Soportados
 
@@ -638,8 +851,15 @@ Las traducciones se almacenan en archivos `lang/*.json`.
 - `de` - Deutsch | German | Alemán
 - `en` - English | Inglés
 - `es` - Español | Spanish | Español
-- `fr` - Français | French | Francés (noch nicht implementiert | not yet implemented | aún no implementado)
-- `it` - Italiano | Italian (noch nicht implementiert | not yet implemented | aún no implementado)
+- `fr` - Français | French | Francés ✅
+- `it` - Italiano | Italian | Italiano ✅
+- `pt` - Português | Portuguese | Portugués ✅
+- `nl` - Nederlands | Dutch | Neerlandés ✅
+- `pl` - Polski | Polish | Polaco ✅
+- `ru` - Русский | Russian | Ruso ✅
+- `zh` - 中文 | Chinese | Chino ✅
+- `ja` - 日本語 | Japanese | Japonés ✅
+- `ko` - 한국어 | Korean | Coreano ✅
 
 ---
 
